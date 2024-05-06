@@ -8,6 +8,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
@@ -24,8 +25,8 @@ class MainActivity : AppCompatActivity() {
 
         val usernameContract = createUsernameContract()
         val usernameLauncher = registerForActivityResult(usernameContract) {
-            if (!it.isNullOrBlank()){
-                usernameTextView.text = it
+            if (it.resultCode == RESULT_OK) {
+                usernameTextView.text = it.data?.getStringExtra(UsernameActivity.EXTRA_USERNAME)
             }
         }
         getUsernameButton.setOnClickListener {
@@ -41,35 +42,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun createUsernameContract() = object : ActivityResultContract<Intent, String?>() {
-        override fun createIntent(context: Context, input: Intent): Intent {
-            return input
-        }
+    private fun createUsernameContract() = ActivityResultContracts.StartActivityForResult()
 
-        override fun parseResult(resultCode: Int, intent: Intent?): String? {
-            return if (resultCode == RESULT_OK) {
-                intent?.getStringExtra(UsernameActivity.EXTRA_USERNAME) ?: ""
-            } else {
-                null
-            }
-        }
-    }
-
-    private fun createUriContract() = object : ActivityResultContract<String, Uri?>() {
-        override fun createIntent(context: Context, input: String): Intent {
-            return Intent(Intent.ACTION_PICK).apply {
-                type = input // MIME types
-            }
-        }
-
-        override fun parseResult(resultCode: Int, intent: Intent?): Uri? {
-            return if (resultCode == RESULT_OK) {
-                intent?.data
-            } else {
-                null
-            }
-        }
-    }
+    private fun createUriContract() = ActivityResultContracts.GetContent()
 
     private fun initViews() {
         getUsernameButton = findViewById(R.id.get_username_button)
