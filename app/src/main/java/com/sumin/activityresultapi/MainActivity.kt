@@ -1,10 +1,13 @@
 package com.sumin.activityresultapi
 
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
@@ -18,28 +21,53 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         initViews()
-        getUsernameButton.setOnClickListener {
-            UsernameActivity.newIntent(this).apply {
-                startActivityForResult(this, RC_USERNAME)
+
+        val usernameContract = createUsernameContract()
+        val usernameLauncher = registerForActivityResult(usernameContract) {
+            if (!it.isNullOrBlank()){
+                usernameTextView.text = it
             }
         }
+        getUsernameButton.setOnClickListener {
+            usernameLauncher.launch(UsernameActivity.newIntent(this))
+        }
+
+        val uriContract = createUriContract()
+        val uriLauncher = registerForActivityResult(uriContract) {
+            imageFromGalleryImageView.setImageURI(it)
+        }
         getImageButton.setOnClickListener {
-            Intent(Intent.ACTION_PICK).apply {
-                type = "image/*" // MIME types
-                startActivityForResult(this, RC_IMAGE)
+            uriLauncher.launch("image/*")
+        }
+    }
+
+    private fun createUsernameContract() = object : ActivityResultContract<Intent, String?>() {
+        override fun createIntent(context: Context, input: Intent): Intent {
+            return input
+        }
+
+        override fun parseResult(resultCode: Int, intent: Intent?): String? {
+            return if (resultCode == RESULT_OK) {
+                intent?.getStringExtra(UsernameActivity.EXTRA_USERNAME) ?: ""
+            } else {
+                null
             }
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == RC_USERNAME && resultCode == RESULT_OK){
-            val username = data?.getStringExtra(UsernameActivity.EXTRA_USERNAME) ?: ""
-            usernameTextView.text = username
+    private fun createUriContract() = object : ActivityResultContract<String, Uri?>() {
+        override fun createIntent(context: Context, input: String): Intent {
+            return Intent(Intent.ACTION_PICK).apply {
+                type = input // MIME types
+            }
         }
-        if (requestCode == RC_IMAGE && resultCode == RESULT_OK){
-            val uri = data?.data
-            imageFromGalleryImageView.setImageURI(uri)
+
+        override fun parseResult(resultCode: Int, intent: Intent?): Uri? {
+            return if (resultCode == RESULT_OK) {
+                intent?.data
+            } else {
+                null
+            }
         }
     }
 
@@ -50,8 +78,4 @@ class MainActivity : AppCompatActivity() {
         imageFromGalleryImageView = findViewById(R.id.image_from_gallery_imageview)
     }
 
-    companion object {
-        private const val RC_USERNAME = 100
-        private const val RC_IMAGE = 101
-    }
 }
